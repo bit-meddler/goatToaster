@@ -169,7 +169,33 @@ X11LUT_RGB8 = {"AliceBlue": (240, 248, 255),
              "YellowGreen": (154, 205,  50),
 }
 
-
+def web23f( val, cache={} ):
+    if val in cache:
+        return cache[val]
+    
+    v = ""
+    if( len( val ) > 6 ):
+        if( val[0] == "#" ):
+            v = val[1:7]
+        else:
+            v = val[:6]
+    elif( len( val ) < 6 ):
+        # some web colours are #123 -> #112233
+        if( val[0] == "#" ):
+            v = val[1]*2 + val[2]*2 + val[3]*2
+        else:
+            # can't untangle input
+            v = "FFDEAD" # default to 'Navajo White'
+    else:
+        v = val
+    r = float( int( v[0:2], 16 ) ) / 255.
+    g = float( int( v[2:4], 16 ) ) / 255.
+    b = float( int( v[4:6], 16 ) ) / 255.
+    ret = (r, g, b)
+    cache[val] = ret
+    return ret
+    
+    
 def int2glf( integers ):
     return map( lambda x: float(x)/255., integers )
 
@@ -360,19 +386,19 @@ def steppedTones( steps, start_chroma, end_chroma ):
         ret.append( newCol )
     return ret
     
-    
-rgb_ = X11LUT_RGB8["AliceBlue"]
-rgb = int2glf( rgb_ )
-hsl = gl3f2hslf( rgb )
-print rgb_, rgb, hsl
-rgb3 = hslf2gl3f( hsl )
-print rgb3, map(lambda x: int(x*255.), rgb3)
+if __name__ == "__main__":    
+    rgb_ = X11LUT_RGB8["AliceBlue"]
+    rgb = int2glf( rgb_ )
+    hsl = gl3f2hslf( rgb )
+    print rgb_, rgb, hsl
+    rgb3 = hslf2gl3f( hsl )
+    print rgb3, map(lambda x: int(x*255.), rgb3)
 
-ab = GLchroma( "AliceBlue" )
-print ab.h_deg
-print ab.col
-print ab
+    ab = GLchroma( "AliceBlue" )
+    print ab.h_deg
+    print ab.col
+    print ab
 
-l = steppedTones(5, ab, GLchroma( "Olive" ) )
-for i in l:
-    print i
+    l = steppedTones(5, ab, GLchroma( "Olive" ) )
+    for i in l:
+        print i
