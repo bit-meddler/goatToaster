@@ -5,7 +5,7 @@ import numpy as np
 import time
 
 import gtBase
-
+import chromaTool as CT
 
 class HenchSim( gtBase.GLtoast ):
     ''' Been meening to write a 'capture henchman' tool for years. Oh well, now's
@@ -104,7 +104,7 @@ class HenchSim( gtBase.GLtoast ):
     def _marker( self ):
         #print "MARKER @ {}".format( self._key_man.last_time )
         if self.recording:
-            self.takes[ self.take_no ]["MARKS"].append(self.nowe)
+            self.takes[ self.take_no ]["MARKS"].append( self.now )
             
             
     def _advanceTake( self ):
