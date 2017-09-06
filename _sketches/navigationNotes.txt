@@ -1,0 +1,99 @@
+cf with: https://stackoverflow.com/questions/30152790/how-do-i-control-the-camera-in-pyopengl-using-a-mouse
+
+Y = camera.azimuth (yaw)
+X = camera.elevation (attitude, pitch)
+Z = camera.roll (swing, camber, pendulum)
+
+DCC mode:
+if NAV_MODE:
+LMB = Tumble (rotate around 'Interest' mouse.dx -> camera.azimuth, mouse.dy -> camera.elevation)
+RMB = Dolly  (Move closer to, or futher from the 'interest': mouse.dx+ -> closer, mouse.dx- -> further, mouse.dy- -> closer, mouse.dy+ -> further; 'Z-like' movement)
+MMB = Crab   (Move camera & interest around, 'X,Y=Like' Movement: mouse.dx -> move in camera's 'right'(x) trunion, mouse.dy -> move in camera's 'up' (Y) trunion)
+MwH = Zoom   (Adjust Fov, WH 'forward' -> Fov- (Zoom in), WH 'Back' -> Fov+ (Zoom out))
+
+Quake mode:
+if NAV_MODE:
+W = walk Fwd (Move camera & Interest along camera 'Fwd' trunion)
+S = Walk Bkw (as above but backward)
+A = Strafe L (Move camera & interest along camera 'right' trunion)
+D = Strafe R (as above but backward)
+
+mouse.dx = camera.azimuth move interest by rotating it around camera pos by azimuth
+mouse.dy = camera.elevation move interest by rotating it around camera pos by elevation
+
+LMB = Select
+RMB = Context menu
+MMB = undefined
+MWH = Zoom (as DCC)
+
+Rotation and translation may need to be scaled by some 'magic number'
+
+
+Picking idea:
+-------------
+
+on Mouse down:
+	lasso_start = x, y
+	switch render mode
+	request redraw
+
+on mouse up:
+	lasso_end = x, y
+	if min(norm(lasso_end - lasso_start)) < 3:
+		lasso_start -= 1
+		laqso_end = lasso_start + 1
+	pix = readpx( lasso_start, lasso_end, alt_buff )
+	switch render mode
+	eids = px2ids( pix )
+	updateSelection( eids )
+	lasso_start = lasso_end = -1
+	request redraw
+
+pix2ids( pix ):
+	flat = pix.ravel
+	eids = []
+	for X in flat:
+		if x !== EID_NONE:
+			if not x in eids: eids.append(x)
+	if DEBUG:
+		for i in range(len(eids)):
+			eids[i] = decodeEid( eids[i] )
+	return eids
+
+updateSelection( eids ):
+	if PICK_MOD_ADD or PICK_MOD_REM:
+		for eid in eids
+			if eid in Q:
+				idx = Q.find( eid )
+				Q.pop(idx)
+			if not PICK_MOD_REM:
+				Q.append(eid)
+	else:
+		Q = eids
+encodeEid(eid):
+	#shuffle MSBs of eid to LSB, so alpha has less data
+	a = (0xFF000000 & eid) >> 24
+	b = (0x00FF0000 & eid) >> 16
+	c = (0x00FF0000 & eid) >>  8
+	d = (0x0000FF00 & eid)
+
+	# |ddaa.aaaa|ddaa.bbbb|ddbb.bbcc|ddcc.cccc|
+
+	D = (0xC0 & a) + ((0xC0 & b) >> 2) + ((0xC0 & c) >> 4) + ((0xC0 & d) >> 6)
+	A = ((0x3F & a) << 2) + ((0x30 & b) >> 4)
+	B = ((0x0F & b) << 4) + ((0x30 & c) >> 4)
+
+switch render mode:
+	if PICKING_MODE
+		detach Front buffer
+		attach dual buffers
+		enable picking shader
+	else:
+		detach dual buffers
+		attach Front Buffer
+		enable regular shader
+
+
+class Entity(object):
+	eid
+	
