@@ -5,6 +5,7 @@ import numpy as np
 import time
 
 import gtBase
+import chromaTool as CT
 
 
 class HenchSim( gtBase.GLtoast ):
