@@ -107,7 +107,7 @@ class GLtoast( object ):
         self._fov = 45.0
         self._z_clip = ( 0.1, 100.0 )
         self._key_man = KeyMan()
-        self.reverseDrawOrder = False
+        self.reverseDrawOrder = True
      
        
     def _reSize( self, width, height ):
