@@ -10,74 +10,76 @@ import chromaTool as CT
 
 
 class KeyMan( object ):
-    DOWN = 0
-    UP   = 1
+    # press states
+    DOWN        = 0
+    UP          = 1
     
-    SPECIAL_OS = 128
-    LEFT_SHIFT = 112 + SPECIAL_OS
-    RIGHT_SHIFT= 113 + SPECIAL_OS
-    LEFT_CTRL  = 114 + SPECIAL_OS
-    RIGHT_CTRL = 115 + SPECIAL_OS
-    LEFT_ALT   = 116 + SPECIAL_OS
+    # key ids
+    SPECIAL_OS  = 128
+    MAX_SLOTS   = 255 # Arbitrary, I'll fix it if there's a crash
+    C_RIGHT     = 100 + SPECIAL_OS
+    C_UP        = 101 + SPECIAL_OS
+    C_LEFT      = 102 + SPECIAL_OS
+    C_DOWN      = 103 + SPECIAL_OS
+    PGUP        = 104 + SPECIAL_OS
+    PGDN        = 105 + SPECIAL_OS
+    HOME        = 106 + SPECIAL_OS
+    END         = 107 + SPECIAL_OS
+    LEFT_SHIFT  = 112 + SPECIAL_OS
+    RIGHT_SHIFT = 113 + SPECIAL_OS
+    LEFT_CTRL   = 114 + SPECIAL_OS
+    RIGHT_CTRL  = 115 + SPECIAL_OS
+    LEFT_ALT    = 116 + SPECIAL_OS
     
     
     def __init__( self ):
-        self.history    = {}
-        self.taps       = {}
-        self.active     = set()
+        self.history   = np.zeros( (KeyMan.MAX_SLOTS, 2), dtype=np.float64 )
+        self.taps      = np.zeros( KeyMan.MAX_SLOTS, dtype=np.uint8 )
+        self.active    = np.zeros( KeyMan.MAX_SLOTS, dtype=np.uint8 )
         self._boot      = time.time()
         self.tap_window = 0.255 # ms
         self.acumulate  = True
-        self.last_time  = 0
+        self.last_time  = 0.
         # registry
         self._rises    = {}
         self._falls    = {}
         self._taps     = {}
         
+        
     def push( self, key_idx, action ):
         ''' deal with keypressess, keyholds, and keytaps.
-            TODO:   work out packing sceme so all keys & modifiers fit
-                    in flat contigious arrays (SoA)
         '''
-        self.last_time = time.time()
-        last_action = None
-        if action==KeyMan.DOWN:
-            self.active.add( key_idx )
-            last_action = KeyMan.UP
-        else:
-            self.active.remove( key_idx )
-            last_action = KeyMan.DOWN
-            
-        if key_idx not in self.history:
-            self.history[ key_idx ] = [ 0, 0 ]
-            self.taps[ key_idx ] = 0
+        now = time.time()
+        last_action = int( not action )
+        self.active[ key_idx ] = last_action
+        self.last_time = now
         
-        key_stats = self.history[ key_idx ]
-        key_taps  = self.taps[ key_idx ]
-        
-        # log some data
-        key_stats[ action ] = self.last_time
-        delta = self.last_time - key_stats[last_action]
-        
+        # SoA data
+        self.history[ key_idx ][ action ] = now
+        delta = now - self.history[ key_idx ][ last_action ]
+                
         # detect multi-taps
         if (delta < self.tap_window):
             # tapped
             if action==KeyMan.DOWN:
-                key_taps += 1
+                self.taps[ key_idx ] += 1
+                
         else:
             # out of tap window - tap count only cleared on subsequent press!
             if self.acumulate and action==KeyMan.DOWN:
-                key_taps = 0
+                self.taps[ key_idx ] = 0
 
-        # scan registered key events for 'key_idx' and emit CB
-        if action==KeyMan.DOWN:
-            if key_idx in self._falls:
-                self._falls[key_idx]()
-        else:
+        # check registered key events for 'key_idx' and emit CB
+        if action : # up==1==True
             if key_idx in self._rises:
                 self._rises[key_idx]()
+        else:
+            if key_idx in self._falls:
+                self._falls[key_idx]()
                 
-        if key_taps>1:
+        # I might not do it this way. I think a CB expecting to be tapped
+        # should check taps[idx] when called (it knows the regidtered idx)
+        if self.taps[ key_idx ]>1:
             if key_idx in self._taps:
                 self._taps[key_idx]()
         # done
@@ -108,12 +110,14 @@ class GLtoast( object ):
         self._z_clip = ( 0.1, 100.0 )
         self._key_man = KeyMan()
         self.reverseDrawOrder = True
+        self.nav_mode = "MAYA" # TODO: "QUAKE" mode (wasd + orbit mouse)
      
        
     def _reSize( self, width, height ):
         new_h = 2 if(height<2) else height
         new_w = 2 if(width<2)  else width
-        ''' not quite right yet
+        ''' TODO: fix fixed ratio window
+        not quite right yet
         if self._ratio_lock:
             fw, fh = float( new_w ), float( new_h )
             ratio = fw/fh
@@ -131,8 +135,11 @@ class GLtoast( object ):
         
         
     def _idle( self ):
+        # if [Alt] pressed, mouse clicks are navigation taasks
+        self._navigating = (self.nav_mode=="MAYA") and \
+                            self._key_man.active[KeyMan.LEFT_ALT]
+        
         glutPostRedisplay()
-        #self._draw()
         
     def _draw( self ):
         pass
