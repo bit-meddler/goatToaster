@@ -116,7 +116,8 @@ class GLtoast( object ):
     def _reSize( self, width, height ):
         new_h = 2 if(height<2) else height
         new_w = 2 if(width<2)  else width
-        ''' TODO: fix fixed ratio window
+        # TODO: fix fixed ratio window
+        '''
         not quite right yet
         if self._ratio_lock:
             fw, fh = float( new_w ), float( new_h )
@@ -162,12 +163,18 @@ class GLtoast( object ):
         
     def init( self ):
         # do glut init
+        # TODO: refactor to freeglut
         glutInit()
         glutInitDisplayMode( self._glut_opts )
         
         # Get Natove res
         self._native_wh = (glutGet( GLUT_SCREEN_WIDTH ), glutGet( GLUT_SCREEN_HEIGHT ))
-        # TODO: guard against requested window size > native
+        
+        # Guard against requested window size > native
+        new_wh = list( self._wh )
+        new_wh[0] = min( self._wh[0], self._native_wh[0] )
+        new_wh[1] = min( self._wh[1], self._native_wh[1] )
+        self._wh = tuple( new_wh )
         
         # auto center
         if self._center:
