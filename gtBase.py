@@ -33,17 +33,18 @@ class KeyMan( object ):
     
     
     def __init__( self ):
-        self.history   = np.zeros( (KeyMan.MAX_SLOTS, 2), dtype=np.float64 )
-        self.taps      = np.zeros( KeyMan.MAX_SLOTS, dtype=np.uint8 )
-        self.active    = np.zeros( KeyMan.MAX_SLOTS, dtype=np.uint8 )
-        self._boot      = time.time()
-        self.tap_window = 0.255 # ms
-        self.acumulate  = True
-        self.last_time  = 0.
+        self.history     = np.zeros( (KeyMan.MAX_SLOTS, 2), dtype=np.float64 )
+        self.taps        = np.zeros( KeyMan.MAX_SLOTS, dtype=np.uint8 )
+        self.active      = np.zeros( KeyMan.MAX_SLOTS, dtype=np.uint8 )
+        self._boot       = time.time()
+        self.tap_window  = 0.255 # ms
+        self.acumulate   = True
+        self.last_time   = 0.
+        self.last_action = 0
         # registry
-        self._rises    = {}
-        self._falls    = {}
-        self._taps     = {}
+        self._rises      = {}
+        self._falls      = {}
+        self._taps       = {}
         
         
     def push( self, key_idx, action ):
@@ -76,6 +77,7 @@ class KeyMan( object ):
         else:
             if key_idx in self._falls:
                 self._falls[key_idx]()
+            self.last_action = key_idx
                 
         # I might not do it this way. I think a CB expecting to be tapped
         # should check taps[idx] when called (it knows the regidtered idx)
