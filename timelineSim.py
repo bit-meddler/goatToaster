@@ -12,11 +12,16 @@ import chromaTool as CT
 class TimeLine( gtBase.GLtoast ):
     ''' A nice looking timeline:
         # BG with graticules
+            + Sensible granularity
         # sub region display [log, active, cached]
         # marks in log region
         # moving play head
         # IN/OUT indicators
         # Magnifying Glass
+            + BG and graticules rescale
+        # Moving Magnifying glass
+            + trys to keep glass center in sync with playhead's position in file
+            + locks left and right till playhead reaches or exceedes center
         # Rate stretch (Multiplier) Control
         
         Respecting AVID shortcuts:
@@ -64,7 +69,7 @@ class TimeLine( gtBase.GLtoast ):
         # super
         super( HenchSim, self ).init()
         # set up HUD LOG
-        self._hud_man.addMsg( "LOG", "Booting...", CT.web23f("#0000FF") )
+        self._hud_man.addMsg( "LOG", "Booting...", CT.web23f("#0000FF"), -1 )
         
         # my Vars
         # #######
@@ -76,13 +81,20 @@ class TimeLine( gtBase.GLtoast ):
         self.end_frame  = 3600 # factors to 24, 25, 30 fps
         self.cur_frame  = 1    # anims count from 1
         self.play_multi = 1.   # multiplier
-        self.skip_multi = 1.
+        self.skip_multi = 1.   # after skipping revert to play_multi
         
         # Markings
-        self.mark_in  = -1
-        self.mark_out = -1
+        self.mark_in     = -1
+        self.mark_out    = -1
         self.mark_active = [] # List of [in,out] pairs, in order
-        self.mark_cached = [] #  ditto
+        self.mark_cached = [] #             ditto
+        
+        # View
+        # Magnifying glass dosen't rescale like premiere
+        # these are as a % of mag_bg width, which is scaled to fit canvas size
+        self.mag_in     =   0.
+        self.mag_out    = 100.
+        self.mag_first  =   0. # start of mag region, 
         
         # timing
         self.native_frame_dur = 0.04 # 25fps
@@ -93,7 +105,7 @@ class TimeLine( gtBase.GLtoast ):
         
         # clean exit
         self._key_man.registerFallingCB( 27, self.end)
-        self._hud_man.addMsg( "LOG", "Ready!" )        
+        self._hud_man.addMsg( "LOG", "Ready!", overide_life=33 )        
         
         
     def end( self ):
