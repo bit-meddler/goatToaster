@@ -356,7 +356,8 @@ class GLtoast( object ):
         glutInitDisplayMode( self._glut_opts )
         
         # Get Natove res
-        self._native_wh = (glutGet( GLUT_SCREEN_WIDTH ), glutGet( GLUT_SCREEN_HEIGHT ))
+        self._native_wh = (glutGet( GLUT_SCREEN_WIDTH  ),
+                           glutGet( GLUT_SCREEN_HEIGHT ))
         
         # Guard against requested window size > native
         new_wh = list( self._wh )
@@ -382,6 +383,9 @@ class GLtoast( object ):
         glDepthFunc(GL_LESS) 
     
         # bind std CBs
+        # This only works because we're interpreted, and this function is called
+        # after the object is constructed, and the derived method has superceeded
+        # it's prototype.
         glutDisplayFunc( self._draw   )
         glutIdleFunc(    self._idle   )
         glutReshapeFunc( self._reSize )
@@ -411,7 +415,7 @@ class GLtoast( object ):
 
         
     def end( self ):
-        # graceful exit cb
+        # graceful exit cb, if only it worked
         pass
 
         
