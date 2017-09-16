@@ -62,12 +62,12 @@ class TimeLine( gtBase.GLtoast ):
     
     
     def __init__(self):
-        super( HenchSim, self ).__init__()
+        super( TimeLine, self ).__init__()
         
          
     def init( self ):
         # super
-        super( HenchSim, self ).init()
+        super( TimeLine, self ).init()
         # set up HUD LOG
         self._hud_man.addMsg( "LOG", "Booting...", CT.web23f("#0000FF"), -1 )
         
@@ -123,7 +123,7 @@ class TimeLine( gtBase.GLtoast ):
         self.paintLists()
         
         # swap buffers & clean up
-        super( HenchSim, self )._draw()
+        super( TimeLine, self )._draw()
         
         
 myApp = TimeLine()
