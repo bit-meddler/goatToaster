@@ -12,7 +12,67 @@ from collections import deque
 
 import chromaTool as CT
 
-
+class TimeMan( object ):
+    class Clock( object ):
+        def __init__( self ):
+            self.acum_d = 0.
+            self.last_t = 0.
+            self.last_d = 0.
+            self.ticks = 0
+            self.push = self._first
+            
+        def _first( self, time ):
+            self.last_t = now
+            self.ticks = 1
+            self.push = self._second
+            
+        def _second( self, time ):
+            self.last_d = time - self.last_t
+            self.last_t = now
+            self.ticks += 1
+            self.acum_d = self.last_d
+            self.push = self._push
+            
+        def _push( self, time ):
+            self.last_d = time - self.last_t
+            self.last_t = now
+            self.ticks += 1
+            self.acum_d += self.last_d
+            self.acum_d /= 2.
+        
+        def getFPS( self ):
+            if self.ticks > 3:
+                return 1. / self.accum_d
+            else:
+                return 1.
+            
+            
+    def __init__( self ):
+        self._clocks = {}
+        
+        
+    def addClock( self, clock ):
+        self._clocks[ clock ] = Clock()
+        
+        
+    def push( self, clock_list ):
+        now = time.time()
+        for clock in clock_list:
+            if clock in self._clocks:
+                self._clocks[ clock ].push(now)
+        
+        
+    def checkFPS( self, clock ):
+        if clock in self._clocks:
+            return self._clocks[ clock ].getFPS()
+   
+   
+    def checkDur( self, clock ):
+        if clock in self._clocks:
+            return self._clocks[ clock ].acum_d
+            
+   
+            
 class KeyMan( object ):
     # press states
     DOWN        = 0
@@ -20,7 +80,6 @@ class KeyMan( object ):
     
     # key ids
     SPECIAL_OS  = 128
-    MAX_SLOTS   = 255 # Arbitrary, I'll fix it if there's a crash
     C_RIGHT     = 100 + SPECIAL_OS
     C_UP        = 101 + SPECIAL_OS
     C_LEFT      = 102 + SPECIAL_OS
@@ -35,6 +94,7 @@ class KeyMan( object ):
     RIGHT_CTRL  = 115 + SPECIAL_OS
     LEFT_ALT    = 116 + SPECIAL_OS
     
+    MAX_SLOTS   = 255 # Arbitrary, I'll fix it if there's a crash
     
     def __init__( self ):
         self.history     = np.zeros( (KeyMan.MAX_SLOTS, 2), dtype=np.float64 )
@@ -196,10 +256,12 @@ class GLtoast( object ):
         self._title = None
         self._wh = (640,480)
         self._native_wh = (1920,1280)
-        self._bg = (0.0, 0.0, 0.0, 1.0)
+        self._min_extents = (300, 50)
+        self._bg = (0.0, 0.0, 0.0, 1.0) # default clear colour
         self._native_pos = (0,0)
-        self._center = False
-        self._ratio_lock = True
+        self._center = False # force center of panel
+        self._ratio_lock = True # lock inital aspect ratio
+        self._ext_lock = True # Lock to display min extents
         self._ratio = float(self._wh[0]) / float(self._wh[1])
         self._fov = 45.0
         self._z_clip = ( 0.1, 100.0 )
@@ -220,8 +282,11 @@ class GLtoast( object ):
         
         
     def _reSize( self, width, height ):
-        new_h = 2 if(height<2) else height
-        new_w = 2 if(width<2)  else width
+        lock_w, lock_h = 2, 2
+        if self._ext_lock:
+            lock_w, lock_h = self._min_extents
+        new_h = lock_h if(height<lock_h) else height
+        new_w = lock_w if(width<lock_w)  else width
         # TODO: fix fixed ratio window
         '''
         not quite right yet
@@ -274,7 +339,7 @@ class GLtoast( object ):
                     self.drawRect2D( x, y, w, h, CT.web23f( col ), mode )
             elif task == "LINES":
                 for (x, y, m, n, col) in self.line_list:
-                    self.drawLine2D( x, y, col )
+                    self.drawLine2D( x, y, m, n, CT.web23f( col ) )
             
         if self._reverseDrawOrder:
             self.doHUD()
