@@ -119,7 +119,9 @@ class TimeLine( gtBase.GLtoast ):
         # Compute Fixed UI, update min Extents
         self._computeUIFixed()
         # TODO: cache fixed UI from display list
+        #       In a real application this would be an image, and blitted into place
         self._fixed_ui_cache = None
+        
         
     def end( self ):
         exit(0)      
@@ -129,8 +131,8 @@ class TimeLine( gtBase.GLtoast ):
         nw, nh = self._wh
         x, y, n, m = 0, 0, 0, 0
         
-        edge_pad = 5
-        small_pad = 2
+        edge_pad  = 12
+        small_pad = 5
         
         # UI Regions
         frames_display = (40, 15)
@@ -141,11 +143,11 @@ class TimeLine( gtBase.GLtoast ):
         label_area_h = 10
         mag_pad_w = 40
         region_tick = (8, 19)
-        timeline_height = play_control[1] + small_pad + tc_box[1]
-        min_h = edge_pad + timeline_height + small_pad + speed_bar_h + \
+        timeline_height   = play_control[1] + small_pad + tc_box[1]
+        min_h = edge_pad  + timeline_height + small_pad + speed_bar_h + \
                 small_pad + label_box_h + edge_pad
-        min_w = edge_pad + frames_display[0] + edge_pad + play_control[0] + \
-                edge_pad + 200 + edge_pad
+        min_w = edge_pad  + frames_display[0] + edge_pad + play_control[0] + \
+                edge_pad  + 200 + edge_pad
         self._min_extents = ( min_w, min_h )
         
         # Start drawing Rects
@@ -155,10 +157,13 @@ class TimeLine( gtBase.GLtoast ):
         x = edge_pad
         # ### Frames ###
         # Current Frame
+        y -= frames_display[1]
         self.rec_list.append( (x, y, frames_display[0], frames_display[1],
                                self.COLOURS["TIME_BG"], self.STYLES["QUADS"]) )
+
         self.rec_list.append( (x, y, frames_display[0], frames_display[1],
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
+        
         # Region In Frame
         y -= frames_display[1] + small_pad
         self.rec_list.append( (x, y, frames_display[0], frames_display[1],
@@ -171,41 +176,47 @@ class TimeLine( gtBase.GLtoast ):
                                self.COLOURS["OUT_BG"], self.STYLES["QUADS"]) )
         self.rec_list.append( (x, y, frames_display[0], frames_display[1],
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
+        
+        
+        
         # ### play controls ###
         x += frames_display[0] + small_pad
-        y = nh - edge_pad
+        y = nh - (edge_pad + play_control[1])
         # Transport
         self.rec_list.append( (x, y, play_control[0], play_control[1],
                                self.COLOURS["CONTRA"], self.STYLES["QUADS"]) )
         self.rec_list.append( (x, y, play_control[0], play_control[1],
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
         # TC readout
-        y -= play_control[1] + small_pad
+        y -= (small_pad + tc_box[1])
         self.rec_list.append( (x, y, tc_box[0], tc_box[1],
                                self.COLOURS["TC_BG"], self.STYLES["QUADS"]) )
         self.rec_list.append( (x, y, tc_box[0], tc_box[1],
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
         # Speed bar
-        y -= tc_box[1] + small_pad
+        y -= (speed_bar_h + small_pad)
         self.rec_list.append( (x, y, play_control[0], speed_bar_h,
                                self.COLOURS["BACK"], self.STYLES["QUADS"]) )
         self.rec_list.append( (x, y, play_control[0], speed_bar_h,
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
         # Labels
-        y -= speed_bar_h + small_pad
+        y -= label_box_h + small_pad
         self.rec_list.append( (x, y, play_control[0], label_box_h,
                                self.COLOURS["BACK"], self.STYLES["QUADS"]) )
         self.rec_list.append( (x, y, play_control[0], label_box_h,
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
+
+        y += label_box_h
         y -= label_area_h
         temp = x + play_control[0] - 2
-        self.line_list.append( (x-1, y, temp, y,self.COLOURS["LENS"]) )
+        self.line_list.append( (x-1, y, temp, y, self.COLOURS["LENS"]) )
         y -= label_area_h
-        self.line_list.append( (x-1, y, temp, y,self.COLOURS["LENS"]) )
+        self.line_list.append( (x-1, y, temp, y, self.COLOURS["LENS"]) )
         
+
         # ### Timeline ###
         x += play_control[0] + small_pad
-        y = nh - edge_pad
+        y = nh - (edge_pad + timeline_height)
         # Timeline
         timeline_width = nw - edge_pad - x
         self.rec_list.append( (x, y, timeline_width, timeline_height,
@@ -213,24 +224,24 @@ class TimeLine( gtBase.GLtoast ):
         self.rec_list.append( (x, y, timeline_width, timeline_height,
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
         # Mag
-        y -= timeline_height + small_pad
-        self.rec_list.append( (x+mag_pad_w, y, timeline_width-mag_pad_w, speed_bar_h,
+        y -= (0 + small_pad)
+        self.rec_list.append( (x+mag_pad_w, y, timeline_width-mag_pad_w, -speed_bar_h,
                                self.COLOURS["BACK"], self.STYLES["QUADS"]) )
-        self.rec_list.append( (x+mag_pad_w, y, timeline_width-mag_pad_w, speed_bar_h,
+        self.rec_list.append( (x+mag_pad_w, y, timeline_width-mag_pad_w, -speed_bar_h,
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
         # Labels
         # Labels
         y -= speed_bar_h + small_pad
-        self.rec_list.append( (x, y, timeline_width, label_box_h,
+        self.rec_list.append( (x, y, timeline_width, -label_box_h,
                                self.COLOURS["BACK"], self.STYLES["QUADS"]) )
-        self.rec_list.append( (x, y, timeline_width, label_box_h,
+        self.rec_list.append( (x, y, timeline_width, -label_box_h,
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
         y -= label_area_h
         temp = x + timeline_width - 2
         self.line_list.append( (x-1, y, temp, y,self.COLOURS["LENS"]) )
         y -= label_area_h
         self.line_list.append( (x-1, y, temp, y,self.COLOURS["LENS"]) )
-        
+
         
     def _draw( self ):
         # Reset canvas
@@ -251,7 +262,7 @@ myApp._title = "Optimal Timeline Experiment"
 myApp._bg = tuple( CT.web24f("#D4D0C8") )
 myApp._log_col = "#000000"
 myApp._center = True
-myApp._wh = ( 500, 95 )
+myApp._wh = ( 500, 115 )
 
 myApp.init()
 myApp.prep()

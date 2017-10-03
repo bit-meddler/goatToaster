@@ -332,7 +332,7 @@ class GLtoast( object ):
             self.line_list.reverse()
         else:
             self.doHUD()
-            
+        
         for task in self._draw_order:
             if task == "RECTS":
                 for (x, y, w, h, col, mode) in self.rec_list:
@@ -340,7 +340,6 @@ class GLtoast( object ):
             elif task == "LINES":
                 for (x, y, m, n, col) in self.line_list:
                     self.drawLine2D( x, y, m, n, CT.web23f( col ) )
-            
         if self._reverseDrawOrder:
             self.doHUD()
 
@@ -367,18 +366,23 @@ class GLtoast( object ):
                 
     def drawRect2D( self, x, y, w, h, col=None, mode=GL_QUADS ):
         # for HUD and 2D drawing in context piuxel space
+        # God Damn Winding order!!!
         gl_col = CT._flexCol( col )
         glColor4f( *gl_col )
         glBegin( mode )
+
+        m, n = x+w, y+h
+
         glVertex2f(x, y)
-        glVertex2f(x + w, y)
-        glVertex2f(x + w, y + h)
-        glVertex2f(x, y + h)
+        glVertex2f(m, y)
+        glVertex2f(m, n)
+        glVertex2f(x, n)
+
         if mode==GL_LINES:
             glVertex2f(x, y)
-            glVertex2f(x, y + h)
-            glVertex2f(x + w, y)
-            glVertex2f(x + w, y + h)
+            glVertex2f(x, n)
+            glVertex2f(m, y)
+            glVertex2f(m, n)
         glEnd()
         
         
