@@ -304,8 +304,10 @@ class GLtoast( object ):
             print new_w, new_h, (fw/fh)
         '''
         self._wh = ( new_w, new_h )
-        # adding an existing element will update it's x,y anchor
+        # TODO: Auto for all HUDs
         self._hud_man.addElement( "LOG", self._log_pos[0], self._log_pos[1] )
+        glutReshapeWindow( self._wh[0], self._wh[1] )
+        glutPostRedisplay()
         
         
     def _idle( self ):

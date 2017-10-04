@@ -118,6 +118,7 @@ class TimeLine( gtBase.GLtoast ):
         
         # Compute Fixed UI, update min Extents
         self._computeUIFixed()
+        self._ext_lock = True
         # TODO: cache fixed UI from display list
         #       In a real application this would be an image, and blitted into place
         self._fixed_ui_cache = None
@@ -149,6 +150,8 @@ class TimeLine( gtBase.GLtoast ):
         min_w = edge_pad  + frames_display[0] + edge_pad + play_control[0] + \
                 edge_pad  + 200 + edge_pad
         self._min_extents = ( min_w, min_h )
+        
+        del self.rec_list[:], self.line_list[:]
         
         # Start drawing Rects
         # ###################
@@ -243,6 +246,12 @@ class TimeLine( gtBase.GLtoast ):
         self.line_list.append( (x-1, y, temp, y,self.COLOURS["LENS"]) )
 
         
+    def _reSize( self, width, height ):
+        super( TimeLine, self )._reSize( width, height )
+        print self._wh
+        self._computeUIFixed()
+        
+        
     def _draw( self ):
         # Reset canvas
         self._clear()
@@ -262,9 +271,10 @@ myApp._title = "Optimal Timeline Experiment"
 myApp._bg = tuple( CT.web24f("#D4D0C8") )
 myApp._log_col = "#000000"
 myApp._center = True
-myApp._wh = ( 500, 115 )
+myApp._wh = ( 500, 114 )
 
 myApp.init()
+
 myApp.prep()
 myApp.exe()
 
