@@ -101,31 +101,67 @@ class TimeLine( gtBase.GLtoast ):
         # these are as a % of mag_bg width, which is scaled to fit canvas size
         self.mag_in      =    0.
         self.mag_out     =  100.
-        self.mag_mark_in =    1
-        self.mag_mark_out= 3600
+        self.mag_width   =  100.
+        self.mag_width_f = 3600
+        self.mag_show_in =    1
+        self.mag_show_out= 3600
         self.mag_first   =    0. # start of mag region, 
         
         # timing
         self.native_frame_dur = 0.04 # 25fps
         
-        
         # Register keys / Callback into the key_man
-
+        # ########
+        # test changing Mag level, start point
+        self._key_man.registerFallingCB( ord("m"), self._testMag1 )
+        self._key_man.registerFallingCB( ord("n"), self._testMag2 )
         
         # clean exit
-        self._key_man.registerFallingCB( 27, self.end)
+        self._key_man.registerFallingCB( 27, self.end )
         self._hud_man.addMsg( "LOG", "Ready!", overide_life=33 )        
         
-        # Compute Fixed UI, update min Extents
-        self._computeUIFixed()
+        
+        # Start computing UI
+        # ##################
         self._ext_lock = True
-        # TODO: cache fixed UI from display list
-        #       In a real application this would be an image, and blitted into place
-        self._fixed_ui_cache = None
+        
+        # Compute Fixed UI, update min Extents
+        # TODO: In a real application this would be an image, and blitted into place
+        self._fixed_ui_cache = (0,0)
+        self._computeUIFixed()
+        # Compute Dynamic U
+        self._magMoved()
+        self._computeUIDyn()
+        
+        
+    def _testMag1(self):
+        # expect i=1 o=1800
+        self.mag_out   = 50.
+        self.mag_first = 0.
+        self._magMoved()
+        
+    def _testMag2(self):
+        # expect i=900, o=2700
+        self.mag_first = 25.
+        self._magMoved()        
         
         
     def end( self ):
         exit(0)      
+        
+        
+    def _magMoved( self ):
+        # recompute mag range and start point
+        f_scale = (self.end_frame / 100.)
+        self.mag_width   = self.mag_out - self.mag_in
+        self.mag_width_f = int(f_scale * self.mag_width)
+        
+        self.mag_show_in = int( f_scale * self.mag_first ) + 1
+        self.mag_show_out= min( int(self.mag_show_in + self.mag_width_f), self.end_frame )
+        print self.mag_show_in, self.mag_show_out, self.mag_first
+        # force recompute
+        self._computeUIDyn()
+        
         
     def _computeUIFixed( self ):
         # locals
@@ -222,34 +258,67 @@ class TimeLine( gtBase.GLtoast ):
         y = nh - (edge_pad + timeline_height)
         # Timeline
         timeline_width = nw - edge_pad - x
+        self._draw_time_extents = (x, y, timeline_width, timeline_height)
         self.rec_list.append( (x, y, timeline_width, timeline_height,
                                self.COLOURS["BACK"], self.STYLES["QUADS"]) )
         self.rec_list.append( (x, y, timeline_width, timeline_height,
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
-        # Mag
-        y -= (0 + small_pad)
-        self.rec_list.append( (x+mag_pad_w, y, timeline_width-mag_pad_w, -speed_bar_h,
+        # Mag BG
+        y -= (speed_bar_h + small_pad)
+        self._draw_mag_extents = (x+mag_pad_w, y, timeline_width-mag_pad_w, speed_bar_h)
+        self.rec_list.append( (x+mag_pad_w, y, timeline_width-mag_pad_w, speed_bar_h,
                                self.COLOURS["BACK"], self.STYLES["QUADS"]) )
-        self.rec_list.append( (x+mag_pad_w, y, timeline_width-mag_pad_w, -speed_bar_h,
+        self.rec_list.append( (x+mag_pad_w, y, timeline_width-mag_pad_w, speed_bar_h,
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
         # Labels
         # Labels
-        y -= speed_bar_h + small_pad
-        self.rec_list.append( (x, y, timeline_width, -label_box_h,
+        y -= label_box_h + small_pad
+        self.rec_list.append( (x, y, timeline_width, label_box_h,
                                self.COLOURS["BACK"], self.STYLES["QUADS"]) )
-        self.rec_list.append( (x, y, timeline_width, -label_box_h,
+        self.rec_list.append( (x, y, timeline_width, label_box_h,
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
-        y -= label_area_h
+        y += label_area_h
         temp = x + timeline_width - 2
         self.line_list.append( (x-1, y, temp, y,self.COLOURS["LENS"]) )
-        y -= label_area_h
+        y += label_area_h
         self.line_list.append( (x-1, y, temp, y,self.COLOURS["LENS"]) )
-
         
+        # cache
+        self._fixed_ui_cache = ( len(self.rec_list), len(self.line_list) )
+        print self._fixed_ui_cache
+        
+        
+    def _computeUIDyn( self ):
+        # clear old Dynamic UI
+        # Possible GC error, I have to del it twice to fully clear refs
+        del self.rec_list[self._fixed_ui_cache[0]:], self.line_list[self._fixed_ui_cache[1]:]
+        del self.rec_list[self._fixed_ui_cache[0]:], self.line_list[self._fixed_ui_cache[1]:]
+
+        # Draw Mag Bar
+        mx, my, mw, mh = self._draw_mag_extents
+        mx += 1
+        my += 1
+        mw -= 2
+        mh -= 2
+        f_scale = mw / 100.
+        m_in = int( f_scale * self.mag_first )
+        m_wd = int( f_scale * self.mag_width )
+        self.rec_list.append( (mx+m_in, my, m_wd, mh, self.COLOURS["LENS"],  self.STYLES["QUADS"]) )
+        self.rec_list.append( (mx+m_in, my, m_wd, mh, self.COLOURS["LINES"], self.STYLES["LINES"]) )
+        
+        # Draw Timeline
+        tx, ty, tw, th = self._draw_time_extents
+        tx += 1
+        ty += 1
+        tw -= 2
+        th -= 2
+        # compute Mjr/Mnr Tick spacing
+        
+    
     def _reSize( self, width, height ):
         super( TimeLine, self )._reSize( width, height )
-        print self._wh
         self._computeUIFixed()
+        self._computeUIDyn()
         
         
     def _draw( self ):
