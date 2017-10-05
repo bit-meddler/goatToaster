@@ -64,6 +64,18 @@ class TimeLine( gtBase.GLtoast ):
         "CONTRA"  : "#c3c3c2"
     }
     
+    GRATICS = (
+        # resolution, (Mjr Tick frequency, Minor Tick Frequency)
+        # single frame resolution
+        (    1, ( 10,  1)),
+        # hundreds of frames
+        (  100, ( 25,  5)),
+        (  200, ( 50, 10)),
+        (  400, ( 75, 20)),
+        # thousands of frames
+        ( 1000, (200, 50)),
+        # 1e5
+    )
     
     def __init__(self):
         super( TimeLine, self ).__init__()
@@ -90,7 +102,7 @@ class TimeLine( gtBase.GLtoast ):
         self.play_multi  = 1.   # multiplier
         self.skip_multi  = 1.   # after skipping revert to play_multi
         
-        # Markings
+        # Region Markings
         self.mark_in     =    1 # Single Marked Range (in/out)
         self.mark_out    = 3600 #
         self.mark_active =   [] # List of [in,out] pairs, in order
@@ -107,8 +119,9 @@ class TimeLine( gtBase.GLtoast ):
         self.mag_show_out= 3600
         self.mag_first   =    0. # start of mag region, 
         
-        # timing
+        # timing & playing
         self.native_frame_dur = 0.04 # 25fps
+        self.play_direction = 0 # -1=Reverse, 0=stop/pause, 1=Forwards 
         
         # Register keys / Callback into the key_man
         # ########
@@ -118,7 +131,7 @@ class TimeLine( gtBase.GLtoast ):
         
         # clean exit
         self._key_man.registerFallingCB( 27, self.end )
-        self._hud_man.addMsg( "LOG", "Ready!", overide_life=33 )        
+        self._hud_man.addMsg( "LOG", "Ready!", overide_life=44 )
         
         
         # Start computing UI
@@ -159,6 +172,15 @@ class TimeLine( gtBase.GLtoast ):
         self.mag_show_in = int( f_scale * self.mag_first ) + 1
         self.mag_show_out= min( int(self.mag_show_in + self.mag_width_f), self.end_frame )
         print self.mag_show_in, self.mag_show_out, self.mag_first
+        # compute Mjr/Mnr Tick spacing
+        # get graticule intervals suitable for current magnification
+        last_res   = 0
+        best_scale = (20,5)
+        for (res, scale) in self.GRATICS:
+            # something to do with self.mag_width_f
+            best_scale = scale
+            last_res = res
+        self._timeline_scale = best_scale
         # force recompute
         self._computeUIDyn()
         
@@ -265,12 +287,13 @@ class TimeLine( gtBase.GLtoast ):
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
         # Mag BG
         y -= (speed_bar_h + small_pad)
-        self._draw_mag_extents = (x+mag_pad_w, y, timeline_width-mag_pad_w, speed_bar_h)
-        self.rec_list.append( (x+mag_pad_w, y, timeline_width-mag_pad_w, speed_bar_h,
+        tw = timeline_width - mag_pad_w # timeline draw width
+        tx = x + mag_pad_w # Timeline X anchor
+        self._draw_mag_extents = (tx, y, tw, speed_bar_h, (tw/100.) )
+        self.rec_list.append( (tx, y, tw, speed_bar_h,
                                self.COLOURS["BACK"], self.STYLES["QUADS"]) )
-        self.rec_list.append( (x+mag_pad_w, y, timeline_width-mag_pad_w, speed_bar_h,
+        self.rec_list.append( (tx, y, tw, speed_bar_h,
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
-        # Labels
         # Labels
         y -= label_box_h + small_pad
         self.rec_list.append( (x, y, timeline_width, label_box_h,
@@ -287,7 +310,7 @@ class TimeLine( gtBase.GLtoast ):
         self._fixed_ui_cache = ( len(self.rec_list), len(self.line_list) )
         print self._fixed_ui_cache
         
-        
+    
     def _computeUIDyn( self ):
         # clear old Dynamic UI
         # Possible GC error, I have to del it twice to fully clear refs
@@ -295,14 +318,13 @@ class TimeLine( gtBase.GLtoast ):
         del self.rec_list[self._fixed_ui_cache[0]:], self.line_list[self._fixed_ui_cache[1]:]
 
         # Draw Mag Bar
-        mx, my, mw, mh = self._draw_mag_extents
+        mx, my, mw, mh, m_scale = self._draw_mag_extents
         mx += 1
         my += 1
         mw -= 2
         mh -= 2
-        f_scale = mw / 100.
-        m_in = int( f_scale * self.mag_first )
-        m_wd = int( f_scale * self.mag_width )
+        m_in = int( m_scale * self.mag_first )
+        m_wd = int( m_scale * self.mag_width )
         self.rec_list.append( (mx+m_in, my, m_wd, mh, self.COLOURS["LENS"],  self.STYLES["QUADS"]) )
         self.rec_list.append( (mx+m_in, my, m_wd, mh, self.COLOURS["LINES"], self.STYLES["LINES"]) )
         
@@ -312,7 +334,8 @@ class TimeLine( gtBase.GLtoast ):
         ty += 1
         tw -= 2
         th -= 2
-        # compute Mjr/Mnr Tick spacing
+        # Graticules scale
+        mjr_fq, mnr_fq = self._timeline_scale
         
     
     def _reSize( self, width, height ):
