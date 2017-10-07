@@ -418,6 +418,15 @@ class GLtoast( object ):
         glutBitmapString( self.FONTS[ font ], text )
     
     
+    def textExtents( self, text, font="H10" ):
+        w = 0
+        # glutBitmapLength takes exception to str
+        for c in text:
+            w += glutBitmapWidth( self.FONTS[ font ], ord(c) )
+        h = glutBitmapHeight( self.FONTS[ font ] )
+        return (w,h)
+        
+        
     def doHUD(self):
         # HUD Message
         for task in self._hud_man.HUD_display_list:

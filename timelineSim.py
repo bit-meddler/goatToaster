@@ -308,7 +308,7 @@ class TimeLine( gtBase.GLtoast ):
         
         # cache
         self._fixed_ui_cache = ( len(self.rec_list), len(self.line_list) )
-        
+        # nih
     
     def _computeUIDyn( self ):
         # clear old Dynamic UI
@@ -334,6 +334,10 @@ class TimeLine( gtBase.GLtoast ):
         th -= 2
         # Graticules scale
         mjr_fq, mnr_fq = self._timeline_scale
+        # How many frame Nos can we print in the space available in the timeline?
+        # Max frame number defines all labels width (Doesn't rescale while playing)
+        frame_label_extents = self.textExtents( str(self.end_frame), font="BM8" )
+        print frame_label_extents
         
     
     def _reSize( self, width, height ):
