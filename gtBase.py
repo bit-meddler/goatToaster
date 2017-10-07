@@ -382,7 +382,7 @@ class GLtoast( object ):
 
         m, n = x+w, y+h
 
-        glVertex2f(x, y)
+        glVertex2f(x-1, y)
         glVertex2f(m, y)
         glVertex2f(m, n)
         glVertex2f(x, n)
@@ -399,8 +399,8 @@ class GLtoast( object ):
         gl_col = CT._flexCol( col )
         glColor4f( *gl_col )
         glBegin( GL_LINES )
-        glVertex2f( x, y )
-        glVertex2f( m, n )
+        glVertex2f( x+1, y )
+        glVertex2f( m+1, n )
         glEnd()
         
         

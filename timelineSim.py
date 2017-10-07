@@ -318,12 +318,11 @@ class TimeLine( gtBase.GLtoast ):
 
         # Draw Mag Bar
         mx, my, mw, mh, m_scale = self._draw_mag_extents
-        mx += 1
-        my += 1
-        mw -= 2
-        mh -= 2
+        mx += 2
+        my += 2
+        mh -= 4
         m_in = int( m_scale * self.mag_first )
-        m_wd = int( m_scale * self.mag_width )
+        m_wd = int( m_scale * self.mag_width ) - 4
         self.rec_list.append( (mx+m_in, my, m_wd, mh, self.COLOURS["LENS"],  self.STYLES["QUADS"]) )
         self.rec_list.append( (mx+m_in, my, m_wd, mh, self.COLOURS["LINES"], self.STYLES["LINES"]) )
         
