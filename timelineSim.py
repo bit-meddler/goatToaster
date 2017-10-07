@@ -308,7 +308,6 @@ class TimeLine( gtBase.GLtoast ):
         
         # cache
         self._fixed_ui_cache = ( len(self.rec_list), len(self.line_list) )
-        print self._fixed_ui_cache
         
     
     def _computeUIDyn( self ):
@@ -339,9 +338,10 @@ class TimeLine( gtBase.GLtoast ):
         
     
     def _reSize( self, width, height ):
-        super( TimeLine, self )._reSize( width, height )
-        self._computeUIFixed()
-        self._computeUIDyn()
+        if super( TimeLine, self )._reSize( width, height ):
+            # did a resize, update UI
+            self._computeUIFixed()
+            self._computeUIDyn()
         
         
     def _draw( self ):

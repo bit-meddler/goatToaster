@@ -282,11 +282,17 @@ class GLtoast( object ):
         
         
     def _reSize( self, width, height ):
+        # Returns True if resize took place
+        old_w, old_h = self._wh
+        if width==old_w and height==old_h:
+            return False
         lock_w, lock_h = 2, 2
         if self._ext_lock:
             lock_w, lock_h = self._min_extents
         new_h = lock_h if(height<lock_h) else height
         new_w = lock_w if(width<lock_w)  else width
+        if new_w==old_w and new_h==old_h:
+            return False
         # TODO: fix fixed ratio window
         '''
         not quite right yet
@@ -308,6 +314,7 @@ class GLtoast( object ):
         self._hud_man.addElement( "LOG", self._log_pos[0], self._log_pos[1] )
         glutReshapeWindow( self._wh[0], self._wh[1] )
         glutPostRedisplay()
+        return True
         
         
     def _idle( self ):
