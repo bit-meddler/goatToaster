@@ -275,6 +275,7 @@ class GLtoast( object ):
         self.log.debug( "Goat Toaster STarted" )
         self.rec_list = []
         self.line_list = []
+        self.text_list = []
         self._draw_order = ["LINES","RECTS"]
         self._log_pos =(10,10)
         self._log_life = 45
@@ -334,24 +335,54 @@ class GLtoast( object ):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         
         
-    def paintLists( self ):
+    def paintLists( self, rec_slice=None, line_slice=None ):
         # Draw to back buffer items in the lists
         if self._reverseDrawOrder:
             self.rec_list.reverse() # darwin wants front to back drawing order
             self.line_list.reverse()
         else:
             self.doHUD()
+            self.paintText()
+            
+        # Determine slice of lists to use - Experimental
+        _r_slice, _l_slice = None, None
+        if rec_slice==None:
+            _r_slice = slice( 0, len(self.rec_list), None )
+        else:
+            _r_slice = slice( rec_slice[0], rec_slice[1], None )
+        
+        if line_slice==None:
+            _l_slice = slice( 0, len(self.line_list), None )
+        else:
+            _l_slice = slice( line_slice[0], line_slice[1], None )
         
         for task in self._draw_order:
             if task == "RECTS":
-                for (x, y, w, h, col, mode) in self.rec_list:
+                for (x, y, w, h, col, mode) in self.rec_list[_r_slice]:
                     self.drawRect2D( x, y, w, h, CT.web23f( col ), mode )
             elif task == "LINES":
-                for (x, y, m, n, col) in self.line_list:
+                for (x, y, m, n, col) in self.line_list[_l_slice]:
                     self.drawLine2D( x, y, m, n, CT.web23f( col ) )
+                    
         if self._reverseDrawOrder:
             self.doHUD()
+            self.paintText()
 
+
+    def paintText( self ):
+        for (x, y, text, align, col, font) in self.text_list:
+            off = 0
+            if align=="LEFT":
+                    off = 0
+            elif align=="CENTER":
+                    _w, _h = self.textExtents( text, font )
+                    off = -(_w/2)
+            elif align=="RIGHT":
+                    _w, _h = self.textExtents( text, font )
+                    off = -_w
+                    
+            self.printTxt( x+off, y, text, CT.web23f(col), font)
+            
             
     def _keyDn( self, key, x, y ):
         self._action_native_pos = (x, y)
@@ -411,7 +442,7 @@ class GLtoast( object ):
         glOrtho( 0.0, self._wh[0], 0.0, self._wh[1], 0.0, 1.0 )
         
         
-    def printHUDtxt( self, x, y, text, col=None, font="H10"):
+    def printTxt( self, x, y, text, col=None, font="H10"):
         gl_col = CT._flexCol( col )
         glColor4f( *gl_col )
         glWindowPos2i( x, y )
@@ -428,12 +459,12 @@ class GLtoast( object ):
         
         
     def doHUD(self):
-        # HUD Message
+        # HUD Messages
         for task in self._hud_man.HUD_display_list:
             
             if self._hud_man.HUD_elements[ task ]["TASK"]>0:
                 x, y, text, col, font = self._hud_man.getNextMsg( task )
-                self.printHUDtxt( x, y, text, col, font )
+                self.printTxt( x, y, text, col, font )
             
             
     def init( self ):

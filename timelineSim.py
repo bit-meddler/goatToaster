@@ -1,5 +1,6 @@
 
 import time
+from math import ceil
 
 import numpy    as np
 import datetime as DT
@@ -117,7 +118,12 @@ class TimeLine( gtBase.GLtoast ):
         self.mag_width_f = 3600
         self.mag_show_in =    1
         self.mag_show_out= 3600
-        self.mag_first   =    0. # start of mag region, 
+        self.mag_first   =    0. # start of mag region
+        self.f_label_pad = (0,0)
+        self.f_label_mjrs=    0  # Max Mjr Graticules at current timeline size
+        self.f_label_step=    0  # Steps between Mjrs (actual
+        self.tl_scale    = (0,0)
+        self.tl_font     = "BM8"
         
         # timing & playing
         self.native_frame_dur = 0.04 # 25fps
@@ -143,7 +149,7 @@ class TimeLine( gtBase.GLtoast ):
         self._fixed_ui_cache = (0,0)
         self._computeUIFixed()
         # Compute Dynamic U
-        self._magMoved()
+        self._magZoomed()
         self._computeUIDyn()
         
         
@@ -151,19 +157,36 @@ class TimeLine( gtBase.GLtoast ):
         # expect i=1 o=1800
         self.mag_out   = 50.
         self.mag_first = 0.
-        self._magMoved()
+        self._magZoomed()
         
     def _testMag2(self):
-        # expect i=900, o=2700
+        # expect i=901, o=2700
         self.mag_first = 25.
-        self._magMoved()        
+        self._magZoomed()        
         
         
     def end( self ):
         exit(0)      
         
         
-    def _magMoved( self ):
+    def _recomputeGraticules( self ):
+        frames_to_show = self.mag_show_out - self.mag_show_in
+        self.f_label_step = frames_to_show / self.f_label_mjrs
+        
+        # get graticule intervals suitable for current magnification
+        best_scale, res = None, None
+        for scale_data in self.GRATICS:
+            res, _ = scale_data
+            if res>self.f_label_step:
+                # this is best scale
+                best_scale = scale_data
+                break
+        print res
+        self.tl_scale = best_scale
+
+        
+        
+    def _magZoomed( self ):
         # recompute mag range and start point
         f_scale = (self.end_frame / 100.)
         self.mag_width   = self.mag_out - self.mag_in
@@ -172,15 +195,10 @@ class TimeLine( gtBase.GLtoast ):
         self.mag_show_in = int( f_scale * self.mag_first ) + 1
         self.mag_show_out= min( int(self.mag_show_in + self.mag_width_f), self.end_frame )
         print self.mag_show_in, self.mag_show_out, self.mag_first
-        # compute Mjr/Mnr Tick spacing
-        # get graticule intervals suitable for current magnification
-        last_res   = 0
-        best_scale = (20,5)
-        for (res, scale) in self.GRATICS:
-            # something to do with self.mag_width_f
-            best_scale = scale
-            last_res = res
-        self._timeline_scale = best_scale
+        
+        # compute Mjr/Mnr Tick spacing at new Mag level
+        self._recomputeGraticules()
+        
         # force recompute
         self._computeUIDyn()
         
@@ -237,7 +255,6 @@ class TimeLine( gtBase.GLtoast ):
                                self.COLOURS["OUT_BG"], self.STYLES["QUADS"]) )
         self.rec_list.append( (x, y, frames_display[0], frames_display[1],
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
-        
         
         
         # ### play controls ###
@@ -306,17 +323,30 @@ class TimeLine( gtBase.GLtoast ):
         y += label_area_h
         self.line_list.append( (x-1, y, temp, y,self.COLOURS["LENS"]) )
         
-        # cache
+        # ### cache ###
         self._fixed_ui_cache = ( len(self.rec_list), len(self.line_list) )
-        # nih
+        
+        
+        # ### Graticule Scale ###
+        # Max frame number defines all labels width (Doesn't rescale while playing)
+        frame_label_extents = self.textExtents( str(self.end_frame), font=self.tl_font )
+        PADDING_RATIO = 1.4
+        self.f_label_pad = (int( frame_label_extents[0] * PADDING_RATIO ),
+                                 frame_label_extents[1] + 2)
+        self.f_label_mjrs = tw / self.f_label_pad[0]
+        
+        # recompute graticule spacing / scale at this new canvas size
+        self._recomputeGraticules()
+    
     
     def _computeUIDyn( self ):
         # clear old Dynamic UI
         # Possible GC error, I have to del it twice to fully clear refs
-        del self.rec_list[self._fixed_ui_cache[0]:], self.line_list[self._fixed_ui_cache[1]:]
-        del self.rec_list[self._fixed_ui_cache[0]:], self.line_list[self._fixed_ui_cache[1]:]
+        del self.rec_list[self._fixed_ui_cache[0]:], self.line_list[self._fixed_ui_cache[1]:], self.text_list[:]
+        del self.rec_list[self._fixed_ui_cache[0]:], self.line_list[self._fixed_ui_cache[1]:], self.text_list[:]
 
         # Draw Mag Bar
+        # ############
         mx, my, mw, mh, m_scale = self._draw_mag_extents
         mx += 2
         my += 2
@@ -327,18 +357,38 @@ class TimeLine( gtBase.GLtoast ):
         self.rec_list.append( (mx+m_in, my, m_wd, mh, self.COLOURS["LINES"], self.STYLES["LINES"]) )
         
         # Draw Timeline
+        # #############
         tx, ty, tw, th = self._draw_time_extents
-        tx += 1
-        ty += 1
-        tw -= 2
-        th -= 2
-        # Graticules scale
-        mjr_fq, mnr_fq = self._timeline_scale
-        # How many frame Nos can we print in the space available in the timeline?
-        # Max frame number defines all labels width (Doesn't rescale while playing)
-        frame_label_extents = self.textExtents( str(self.end_frame), font="BM8" )
-        print frame_label_extents
+
+        # Graticules
+        # as the Magnifier might be moving we need to recompute these every time I think
+        magnitude, (mjr_fq, mnr_fq) = self.tl_scale
+        # draw first frame (exactly), N-2 rounded Mjrs, last frame (exactly)
+        # Frame text needs to be aligned left, center*N-2, right
+        mjr_list = [self.mag_show_in]
+        mjr_anch = ["LEFT"]
+        next_round = int( ceil( self.mag_show_in / float( magnitude ) ) * magnitude )
+        for i in range(self.f_label_mjrs-2):
+            # append rounded Majr
+            rnd = next_round + (magnitude*i)
+            if rnd>=self.mag_show_out:
+                break
+            mjr_list.append( rnd )
+            mjr_anch.append( "CENTER" )
+        mjr_list.append( self.mag_show_out )
+        mjr_anch.append( "RIGHT" )
         
+        # Draw Mjr Graticules
+        gh = th - (self.f_label_pad[1] + 4) # Graticule Height, padding + room for font
+        scale = float( tw ) / self.mag_show_out - self.mag_show_in
+        gt = ty+gh # gratic Top
+        ga = ty+gh - 2 # Gratc text anchor
+        
+        for mjr, align in zip( mjr_list, mjr_anch ):
+            x = tx + int( mjr * scale )
+            self.line_list.append( (x, ty, x, gt, self.COLOURS["GRATICS"]) )
+            #self.text_list.append( (x, ga, str(mjr), align, self.COLOURS["TEXT"], self.tl_font) )
+    
     
     def _reSize( self, width, height ):
         if super( TimeLine, self )._reSize( width, height ):
