@@ -337,6 +337,7 @@ class GLtoast( object ):
         
     def paintLists( self, rec_slice=None, line_slice=None ):
         # Draw to back buffer items in the lists
+        self.paintText()
         if self._reverseDrawOrder:
             self.rec_list.reverse() # darwin wants front to back drawing order
             self.line_list.reverse()
@@ -366,7 +367,7 @@ class GLtoast( object ):
                     
         if self._reverseDrawOrder:
             self.doHUD()
-            self.paintText()
+        self.paintText()
 
 
     def paintText( self ):

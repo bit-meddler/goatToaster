@@ -330,7 +330,7 @@ class TimeLine( gtBase.GLtoast ):
         # ### Graticule Scale ###
         # Max frame number defines all labels width (Doesn't rescale while playing)
         frame_label_extents = self.textExtents( str(self.end_frame), font=self.tl_font )
-        PADDING_RATIO = 1.4
+        PADDING_RATIO = 1.3
         self.f_label_pad = (int( frame_label_extents[0] * PADDING_RATIO ),
                                  frame_label_extents[1] + 2)
         self.f_label_mjrs = tw / self.f_label_pad[0]
@@ -380,14 +380,16 @@ class TimeLine( gtBase.GLtoast ):
         
         # Draw Mjr Graticules
         gh = th - (self.f_label_pad[1] + 4) # Graticule Height, padding + room for font
-        scale = float( tw ) / self.mag_show_out - self.mag_show_in
+        scale = float( tw ) / (self.mag_show_out - self.mag_show_in)
         gt = ty+gh # gratic Top
-        ga = ty+gh - 2 # Gratc text anchor
-        
+        ga = ty+gh +4 # Gratc text anchor
+        max_x = tw+tx
         for mjr, align in zip( mjr_list, mjr_anch ):
             x = tx + int( mjr * scale )
+            if x>=max_x:
+                x -= 2
             self.line_list.append( (x, ty, x, gt, self.COLOURS["GRATICS"]) )
-            #self.text_list.append( (x, ga, str(mjr), align, self.COLOURS["TEXT"], self.tl_font) )
+            self.text_list.append( (x, ga, str(mjr), align, self.COLOURS["TEXT"], self.tl_font) )
     
     
     def _reSize( self, width, height ):
