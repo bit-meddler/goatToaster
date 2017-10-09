@@ -125,6 +125,9 @@ class TimeLine( gtBase.GLtoast ):
         self.tl_scale    = (0,0)
         self.tl_font     = "BM8"
         
+        # Cycle Magnification test cases
+        self._test_mag = 0
+        
         # timing & playing
         self.native_frame_dur = 0.04 # 25fps
         self.play_direction = 0 # -1=Reverse, 0=stop/pause, 1=Forwards 
@@ -132,8 +135,7 @@ class TimeLine( gtBase.GLtoast ):
         # Register keys / Callback into the key_man
         # ########
         # test changing Mag level, start point
-        self._key_man.registerFallingCB( ord("m"), self._testMag1 )
-        self._key_man.registerFallingCB( ord("n"), self._testMag2 )
+        self._key_man.registerFallingCB( ord("m"), self._testMag )
         
         # clean exit
         self._key_man.registerFallingCB( 27, self.end )
@@ -153,17 +155,24 @@ class TimeLine( gtBase.GLtoast ):
         self._computeUIDyn()
         
         
-    def _testMag1(self):
-        # expect i=1 o=1800
-        self.mag_out   = 50.
-        self.mag_first = 0.
+    def _testMag(self):
+        if self._test_mag == 0:
+            # expect i=1 o=1800
+            self.mag_out   = 50.
+            self.mag_first = 0.
+        elif self._test_mag == 1:
+            # expect i=901, o=2700
+            self.mag_first = 25.
+        elif self._test_mag == 2:
+            # expect 451, 2251
+            self.mag_first = 12.5
+        # round the corner 
+        self._test_mag += 1
+        if self._test_mag>=3:
+            self._test_mag = 0
+            
+        # update
         self._magZoomed()
-        
-        
-    def _testMag2(self):
-        # expect i=901, o=2700
-        self.mag_first = 25.
-        self._magZoomed()        
         
         
     def end( self ):
