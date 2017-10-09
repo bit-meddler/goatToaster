@@ -159,6 +159,7 @@ class TimeLine( gtBase.GLtoast ):
         self.mag_first = 0.
         self._magZoomed()
         
+        
     def _testMag2(self):
         # expect i=901, o=2700
         self.mag_first = 25.
@@ -363,6 +364,8 @@ class TimeLine( gtBase.GLtoast ):
         # Graticules
         # as the Magnifier might be moving we need to recompute these every time I think
         magnitude, (mjr_fq, mnr_fq) = self.tl_scale
+        # Don't forget to rescale based on mag level
+        
         # draw first frame (exactly), N-2 rounded Mjrs, last frame (exactly)
         # Frame text needs to be aligned left, center*N-2, right
         mjr_list = [self.mag_show_in]
@@ -385,7 +388,7 @@ class TimeLine( gtBase.GLtoast ):
         ga = ty+gh +4 # Gratc text anchor
         max_x = tw+tx
         for mjr, align in zip( mjr_list, mjr_anch ):
-            x = tx + int( mjr * scale )
+            x = tx + int( (mjr-self.mag_show_in) * scale )
             if x>=max_x:
                 x -= 2
             self.line_list.append( (x, ty, x, gt, self.COLOURS["GRATICS"]) )
