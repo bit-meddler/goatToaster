@@ -411,11 +411,11 @@ class TimeLine( gtBase.GLtoast ):
         self.rec_list.append( (m_x, my, m_wd, mh, self.COLOURS["LENS"],  self.STYLES["QUADS"]) )
         self.rec_list.append( (m_x, my, m_wd, mh, self.COLOURS["LINES"], self.STYLES["LINES"]) )
         # Mag Lables
-        # Frame TEXT Labels
         self.text_list.append(  (m_x+1, my, str(self.mag_show_in),
                                 "LEFT", self.COLOURS["LENS_TXT"], self.tl_font) )
         self.text_list.append(  (m_x+m_wd-1, my, str(self.mag_show_out),
                                 "RIGHT", self.COLOURS["LENS_TXT"], self.tl_font) )
+                                
         # Draw Timeline
         # #############
         tx, ty, tw, th = self._draw_time_extents
@@ -441,10 +441,10 @@ class TimeLine( gtBase.GLtoast ):
         mjr_anch.append( "RIGHT" )
         
         # Draw Mjr Graticules
-        gh = th - (self.f_label_pad[1] + 4) # Graticule Height, padding + room for font
+        gh = th - 2*(self.f_label_pad[1] + 4) # Graticule Height, padding + room for font
         scale = float( tw ) / (self.mag_show_out - self.mag_show_in)
-        gt = ty+gh # gratic Top
-        ga = ty+gh +4 # Gratc text anchor
+        gt = ty-gh # gratic Top
+        ga = ty-gh +4 # Gratc text anchor
         max_x = tw+tx
         for mjr, align in zip( mjr_list, mjr_anch ):
             x = tx + int( (mjr-self.mag_show_in) * scale )
@@ -453,7 +453,19 @@ class TimeLine( gtBase.GLtoast ):
             self.line_list.append( (x, ty, x, gt, self.COLOURS["GRATICS"]) )
             self.text_list.append( (x, ga, str(mjr), align, self.COLOURS["TEXT"], self.tl_font) )
     
-    
+        # Draw IN/OUT decorations & Labels
+        lh = th - self.f_label_pad[1] + 4 # Label Height
+        
+        # in (markin / show in
+        if self.mark_in>=self.mag_show_in:
+            # Draw Indicator & Label
+            pass
+        # out
+        if self.mark_out<=self.mag_show_out:
+            # Draw Indicator & Label
+            pass
+            
+            
     def _reSize( self, width, height ):
         if super( TimeLine, self )._reSize( width, height ):
             # did a resize, update UI
