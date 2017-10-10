@@ -12,20 +12,38 @@ import chromaTool as CT
 
 class TimeLine( gtBase.GLtoast ):
     ''' A nice looking timeline:
+    
         # BG with graticules
             + Sensible granularity
         # sub region display [log, active, cached]
         # marks in log region
         # moving play head
+            + 'Frame duration' line (when heavily zoomed)
+            + acented highlight
         # IN/OUT indicators
         # Magnifying Glass
             + BG and graticules rescale
-        # Moving Magnifying glass
-            + trys to keep glass center in sync with playhead's position in file
-            + locks left and right till playhead reaches or exceedes center
+        # Magnifying glass modes [CHASE|LENS]
+            CHASE:
+                + trys to keep glass center in sync with playhead's position in file
+                + locks left and right till playhead reaches or exceedes center
+            LENS:
+                + Timeline stays as positioned by Magnifier
+                + playhead will rush through & out the other side
         # Rate stretch (Multiplier) Control
-        
-        Respecting AVID shortcuts:
+        # Playmodes:
+            CADENCE:
+                + every Frame
+                + realtime (skips frames)
+                + every whole frame (Skips subframes)
+            DIRECTION:
+                + Forward
+                + backward
+                + PingPong
+                + loop
+                
+                
+        Respecting AVID kb shortcuts:
         # [Space] = toggle Play Pause
         # [I], [O] = Mark main In/Out
         # [Shift] + [I], [O] = append In/Out region to regions list
@@ -42,6 +60,18 @@ class TimeLine( gtBase.GLtoast ):
         # [T] = promote select region to active sub-region
         # [Shift]+[T] = extract select region from active sub0region
         
+        Mouse Gestures:
+        Timeline
+        # [Alt] + [LMB]                 = drag kagnifyer
+        # [Alt] + [RMB] + Gesture L/R   = Zoom Out/In
+        # [Alt] + [DBL]                 = Reset Zoom
+        # [LMB] + Drag + In/play/out    = Change Frame-No
+        # [DBL] + In/Play/Out           = Reset Frame-No
+        Magnifier
+        # [LMB] + Drag                  = Move Magnifier
+        # [Alt] + [DBL]                 = Reset Magnification
+        # [Alt] + [LMB] + Gesture L/R   = Zoom out/In
+        
         Click Handlers ?
         # We could do this, invisible rect on top of 'hit' regions?
         # or not bother, this is just an experiment
@@ -56,6 +86,7 @@ class TimeLine( gtBase.GLtoast ):
         "OUT_TICK": "#da251d",
         "PLAY"    : "#29166f",
         "LENS"    : "#007cc3",
+        "LENS_TXT": "#ffffff",
         "IN_BG"   : "#70c564",
         "TC_BG"   : "#dcdcdc",
         "OUT_BG"  : "#ff9696",
@@ -166,11 +197,12 @@ class TimeLine( gtBase.GLtoast ):
         elif self._test_mag == 2:
             # expect 451, 2251
             self.mag_first = 12.5
-        # round the corner 
-        self._test_mag += 1
-        if self._test_mag>=3:
-            self._test_mag = 0
+        elif self._test_mag == 3:   
+            # round the corner 
+            self._test_mag = -1
             
+        # increment
+        self._test_mag += 1
         # update
         self._magZoomed()
         
@@ -217,7 +249,17 @@ class TimeLine( gtBase.GLtoast ):
         # locals
         nw, nh = self._wh
         x, y, n, m = 0, 0, 0, 0
+
+        # UI Padding Constants
+        # ####################
         
+        # Max frame number defines all labels width (Doesn't rescale while playing)
+        frame_label_extents = self.textExtents( str(self.end_frame), font=self.tl_font )
+        PADDING_RATIO = 1.3
+        self.f_label_pad = (int( frame_label_extents[0] * PADDING_RATIO ),
+                                 frame_label_extents[1] + 2)
+
+        # Region Padding
         edge_pad  = 12
         small_pad = 5
         
@@ -225,19 +267,20 @@ class TimeLine( gtBase.GLtoast ):
         frames_display = (40, 15)
         play_control = (141, 21)
         tc_box = (101, 14)
-        speed_bar_h = 9
+        mag_bar_h = frame_label_extents[1] #  room for frame no labels
         label_box_h = 31
         label_area_h = 10
-        mag_pad_w = 40
+        mag_pad_w   = frame_label_extents[0] + small_pad
         region_tick = (8, 19)
         timeline_height   = play_control[1] + small_pad + tc_box[1]
-        min_h = edge_pad  + timeline_height + small_pad + speed_bar_h + \
+        min_h = edge_pad  + timeline_height + small_pad + mag_bar_h + \
                 small_pad + label_box_h + edge_pad
         min_w = edge_pad  + frames_display[0] + edge_pad + play_control[0] + \
                 edge_pad  + 200 + edge_pad
         self._min_extents = ( min_w, min_h )
         
-        del self.rec_list[:], self.line_list[:]
+        del self.rec_list[:], self.line_list[:], self.text_list[:]
+        
         
         # Start drawing Rects
         # ###################
@@ -282,10 +325,10 @@ class TimeLine( gtBase.GLtoast ):
         self.rec_list.append( (x, y, tc_box[0], tc_box[1],
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
         # Speed bar
-        y -= (speed_bar_h + small_pad)
-        self.rec_list.append( (x, y, play_control[0], speed_bar_h,
+        y -= (mag_bar_h + small_pad)
+        self.rec_list.append( (x, y, play_control[0], mag_bar_h,
                                self.COLOURS["BACK"], self.STYLES["QUADS"]) )
-        self.rec_list.append( (x, y, play_control[0], speed_bar_h,
+        self.rec_list.append( (x, y, play_control[0], mag_bar_h,
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
         # Labels
         y -= label_box_h + small_pad
@@ -312,15 +355,19 @@ class TimeLine( gtBase.GLtoast ):
                                self.COLOURS["BACK"], self.STYLES["QUADS"]) )
         self.rec_list.append( (x, y, timeline_width, timeline_height,
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
-        # Mag BG
-        y -= (speed_bar_h + small_pad)
-        tw = timeline_width - mag_pad_w # timeline draw width
+        # Mag bar
+        y -= (mag_bar_h + small_pad)
+        tw = timeline_width - (mag_pad_w * 2)# timeline draw width
         tx = x + mag_pad_w # Timeline X anchor
-        self._draw_mag_extents = (tx, y, tw, speed_bar_h, (tw/100.) )
-        self.rec_list.append( (tx, y, tw, speed_bar_h,
+        self._draw_mag_extents = (tx, y, tw, mag_bar_h, (tw/100.) )
+        self.rec_list.append( (tx, y, tw, mag_bar_h,
                                self.COLOURS["BACK"], self.STYLES["QUADS"]) )
-        self.rec_list.append( (tx, y, tw, speed_bar_h,
+        self.rec_list.append( (tx, y, tw, mag_bar_h,
                                self.COLOURS["LINES"], self.STYLES["LINES"]) )
+        # Frame TEXT Labels
+        self.text_list.append( (tx-2, y+2, str(self.start_frame), "RIGHT", self.COLOURS["TEXT"], self.tl_font) )
+        self.text_list.append( (tx+tw+2, y+2, str(self.end_frame), "LEFT", self.COLOURS["TEXT"], self.tl_font) )
+        
         # Labels
         y -= label_box_h + small_pad
         self.rec_list.append( (x, y, timeline_width, label_box_h,
@@ -334,15 +381,10 @@ class TimeLine( gtBase.GLtoast ):
         self.line_list.append( (x-1, y, temp, y,self.COLOURS["LENS"]) )
         
         # ### cache ###
-        self._fixed_ui_cache = ( len(self.rec_list), len(self.line_list) )
+        self._fixed_ui_cache = ( len(self.rec_list), len(self.line_list), len(self.text_list) )
         
         
         # ### Graticule Scale ###
-        # Max frame number defines all labels width (Doesn't rescale while playing)
-        frame_label_extents = self.textExtents( str(self.end_frame), font=self.tl_font )
-        PADDING_RATIO = 1.3
-        self.f_label_pad = (int( frame_label_extents[0] * PADDING_RATIO ),
-                                 frame_label_extents[1] + 2)
         self.f_label_mjrs = tw / self.f_label_pad[0]
         
         # recompute graticule spacing / scale at this new canvas size
@@ -352,8 +394,10 @@ class TimeLine( gtBase.GLtoast ):
     def _computeUIDyn( self ):
         # clear old Dynamic UI
         # Possible GC error, I have to del it twice to fully clear refs
-        del self.rec_list[self._fixed_ui_cache[0]:], self.line_list[self._fixed_ui_cache[1]:], self.text_list[:]
-        del self.rec_list[self._fixed_ui_cache[0]:], self.line_list[self._fixed_ui_cache[1]:], self.text_list[:]
+        del self.rec_list[self._fixed_ui_cache[0]:], self.line_list[self._fixed_ui_cache[1]:],\
+            self.text_list[self._fixed_ui_cache[2]:]
+        del self.rec_list[self._fixed_ui_cache[0]:], self.line_list[self._fixed_ui_cache[1]:],\
+            self.text_list[self._fixed_ui_cache[2]:]
 
         # Draw Mag Bar
         # ############
@@ -363,9 +407,15 @@ class TimeLine( gtBase.GLtoast ):
         mh -= 4
         m_in = int( m_scale * self.mag_first )
         m_wd = int( m_scale * self.mag_width ) - 4
-        self.rec_list.append( (mx+m_in, my, m_wd, mh, self.COLOURS["LENS"],  self.STYLES["QUADS"]) )
-        self.rec_list.append( (mx+m_in, my, m_wd, mh, self.COLOURS["LINES"], self.STYLES["LINES"]) )
-        
+        m_x = mx + m_in
+        self.rec_list.append( (m_x, my, m_wd, mh, self.COLOURS["LENS"],  self.STYLES["QUADS"]) )
+        self.rec_list.append( (m_x, my, m_wd, mh, self.COLOURS["LINES"], self.STYLES["LINES"]) )
+        # Mag Lables
+        # Frame TEXT Labels
+        self.text_list.append(  (m_x+1, my, str(self.mag_show_in),
+                                "LEFT", self.COLOURS["LENS_TXT"], self.tl_font) )
+        self.text_list.append(  (m_x+m_wd-1, my, str(self.mag_show_out),
+                                "RIGHT", self.COLOURS["LENS_TXT"], self.tl_font) )
         # Draw Timeline
         # #############
         tx, ty, tw, th = self._draw_time_extents
