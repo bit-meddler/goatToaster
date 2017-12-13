@@ -3,7 +3,8 @@
 """
 import copy
 
-class Graph(object):
+class Graph( object ):
+    
     def __init__( self, max_verts ):
         self._max_verts = max_verts
         self.clear()
@@ -20,10 +21,10 @@ class Graph(object):
                             for j in xrange( self._max_verts ) ]
 
     def copy( self, other ):
-        self._verts  = copy.deepcopy( other._verts )
-        self._visit  = copy.deepcopy( other._visit )
+        self._verts  = copy.deepcopy( other._verts  )
+        self._visit  = copy.deepcopy( other._visit  )
         self._revLut = copy.deepcopy( other._revLut )
-        self._ajmx   = copy.deepcopy( other._ajmx )
+        self._ajmx   = copy.deepcopy( other._ajmx   )
         
     def push( self, node ):
         num_verts = len( self._verts )
@@ -156,7 +157,7 @@ class Graph(object):
         while( len( temp._verts ) > 0 ):
             vert = temp.getNoParent()
             print vert
-            if( vert <0 ):
+            if( vert < 0 ):
                 cyclic = True
                 break
             node = temp._verts[vert]
