@@ -277,7 +277,7 @@ class GLtoast( object ):
         self.line_list = []
         self.text_list = []
         self._draw_order = ["LINES","RECTS"]
-        self._log_pos =(10,10)
+        self._log_pos =(10,18)
         self._log_life = 45
         self._log_col = "#ffffff"
         
