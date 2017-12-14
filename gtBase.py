@@ -249,6 +249,18 @@ class GLtoast( object ):
         "LOOPS": GL_LINE_LOOP,
         "POLYS": GL_POLYGON
     }
+    # View Filters
+    VIEW_AXIS    = 1
+    VIEW_GRID    = 2
+    VIEW_CAMERAS = 4
+    VIEW_LABELS  = 8
+    
+    VIEW_FILTERS = {
+        "AXIS"    : VIEW_AXIS,
+        "GRID"    : VIEW_GRID,
+        "CAMERAS" : VIEW_CAMERAS,
+        "LABELS"  : VIEW_LABELS,
+    }
     
     def __init__( self ):
         self.g_wind = None
