@@ -35,6 +35,12 @@ class Node( object ):
         self.dirty = True
         for child in self.children:
             child.invalidate()
+            
+    def process( self ):
+        self.dirty = False
+        # ?? or should the SG manage this ??
+        for child in self.children:
+            child.process()
     
     
     def show( self ):
@@ -67,7 +73,6 @@ class Scene( object ):
         
         
     def connect( self, source_name, source_slot, target_name, target_slot ):
-    
         if not source_name in self.nodes:
             return
         if not target_name in self.nodes:
@@ -98,11 +103,25 @@ class Scene( object ):
             
 if __name__ == "__main__":
     sg = Scene()
+    
     blur = sg.addNode( "blur", "Blur Node" )
     blur.addSlot( "frame_in", "IMAGE", Node.DIR_IN )
     blur.addSlot( "frame_out", "IMAGE", Node.DIR_OUT )
     blur.addSlot( "radius", "FLOAT", Node.DIR_BI )
+    blur.addSlot( "amount", "FLOAT", Node.DIR_BI )
+    
     read = sg.addNode( "read", "Read File" )
     read.addSlot( "frame_out", "IMAGE", Node.DIR_OUT )
+    
+    edge = sg.addNode( "edge", "Edge Enhance Node" )
+    edge.addSlot( "frame_in", "IMAGE", Node.DIR_IN )
+    edge.addSlot( "frame_out", "IMAGE", Node.DIR_OUT )
+    edge.addSlot( "k_size", "DESCRETE", Node.DIR_BI )
+    edge.addSlot( "amount", "FLOAT", Node.DIR_BI )
+    
     sg.connect( read.inner_name, "frame_out", blur.inner_name, "frame_in" )
+    sg.connect( blur.inner_name, "frame_out", edge.inner_name, "frame_in" )
+    
     sg.show()
+    
+    
