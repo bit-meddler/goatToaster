@@ -121,7 +121,7 @@ class Scene( object ):
             
             
     def _findNoParent( self ):
-        for n in self.nodes:
+        for _,n in self.nodes.iteritems():
             if len( n.parents ) == 0:
                 if not n in self.visited:
                     self.visited.add( n )
@@ -132,17 +132,41 @@ class Scene( object ):
     def walk( self ):
         """ Walk the Graph.
         """
-        self.visited = set()
-        vist = []
-        no_parents = []
+        visited = set()
+        walk_order = []
+        orphens = []
+        examine_list = []
         task = self._findNoParent()
         if task != None:
-            no_parents.insert( 0, task )
-        while( len(no_parents)>0 ):
-            pass
+            examine_list.append( task )
+        while( len(examine_list)>0 ):
+            test = examine_list.pop()
+            if test in visited:
+                continue
+            if len(test.children)<1 and len(test.parents)<1 :
+                orphens.append( test )
+                visited.add( c )
+            else:
+                walk_order.insert( 0, test )
+                for c in test.children:
+                    if c in visited:
+                        pass
+                    elif len(c.children)>0 :
+                        examine_list.insert( 0, c )
+
+            task = self._findNoParent()
+            if task != None:
+                examine_list.append( task )
+
+        print walk_order
+        for t in walk_order:
+            t.process()
         
         
 if __name__ == "__main__":
+
+    # Node Graph
+    
     sg = Scene()
     
     blur = sg.addNode( "blur", "Blur Node" )
@@ -164,5 +188,53 @@ if __name__ == "__main__":
     sg.connect( blur.inner_name, "frame_out", edge.inner_name, "frame_in" )
     
     sg.show()
+    sg.walk()
+    sg.show()
     
+    # ----------------- Try a skeleton hyrachy
     
+    sg = Scene()
+    g_origin = sg.addNode( "g_origin", "Root" )
+    g_origin.addSlot( "G", "M44", Node.GRP_INT, Node.DIR_BI )
+    
+    root = sg.addNode( "root", "Root" )
+    root.addSlot( "L", "M44", Node.GRP_UI, Node.DIR_BI )
+    root.addSlot( "G", "M44", Node.GRP_INT, Node.DIR_BI )
+    
+    hips = sg.addNode( "hips", "Root" )
+    hips.addSlot( "L", "M44", Node.GRP_UI, Node.DIR_BI )
+    hips.addSlot( "G", "M44", Node.GRP_INT, Node.DIR_BI )
+    
+    l_leg_upper = sg.addNode( "l_leg_upper", "Root" )
+    l_leg_upper.addSlot( "L", "M44", Node.GRP_UI, Node.DIR_BI )
+    l_leg_upper.addSlot( "G", "M44", Node.GRP_INT, Node.DIR_BI )
+    
+    r_leg_upper = sg.addNode( "r_leg_upper", "Root" )
+    r_leg_upper.addSlot( "L", "M44", Node.GRP_UI, Node.DIR_BI )
+    r_leg_upper.addSlot( "G", "M44", Node.GRP_INT, Node.DIR_BI )
+    
+    l_leg_lower = sg.addNode( "l_leg_lower", "Root" )
+    l_leg_lower.addSlot( "L", "M44", Node.GRP_UI, Node.DIR_BI )
+    l_leg_lower.addSlot( "G", "M44", Node.GRP_INT, Node.DIR_BI )
+    
+    r_leg_lower = sg.addNode( "r_leg_lower", "Root" )
+    r_leg_lower.addSlot( "L", "M44", Node.GRP_UI, Node.DIR_BI )
+    r_leg_lower.addSlot( "G", "M44", Node.GRP_INT, Node.DIR_BI )
+    
+    l_foot = sg.addNode( "l_foot", "Root" )
+    l_foot.addSlot( "L", "M44", Node.GRP_UI, Node.DIR_BI )
+    l_foot.addSlot( "G", "M44", Node.GRP_INT, Node.DIR_BI )
+    
+    r_foot = sg.addNode( "r_foot", "Root" )
+    r_foot.addSlot( "L", "M44", Node.GRP_UI, Node.DIR_BI )
+    r_foot.addSlot( "G", "M44", Node.GRP_INT, Node.DIR_BI )
+    
+    sg.connect( g_origin.inner_name, "G", root.inner_name, "L" )
+    sg.connect( root.inner_name, "G", hips.inner_name, "L" )
+    sg.connect( hips.inner_name, "G", l_leg_upper.inner_name, "L" )
+    sg.connect( hips.inner_name, "G", r_leg_upper.inner_name, "L" )
+    sg.connect( l_leg_upper.inner_name, "G", l_leg_lower.inner_name, "L" )
+    sg.connect( r_leg_upper.inner_name, "G", r_leg_lower.inner_name, "L" )
+    sg.connect( l_leg_lower.inner_name, "G", l_foot.inner_name, "L" )
+    sg.connect( r_leg_lower.inner_name, "G", r_foot.inner_name, "L" )
+    sg.show()
