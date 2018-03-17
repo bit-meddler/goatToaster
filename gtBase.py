@@ -262,6 +262,8 @@ class GLtoast( object ):
         "LABELS"  : VIEW_LABELS,
     }
     
+    UP = (0.,1.,0.) # Y-Up!
+    
     def __init__( self ):
         self.g_wind = None
         self._glut_opts = GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH
@@ -277,6 +279,8 @@ class GLtoast( object ):
         self._ratio = float(self._wh[0]) / float(self._wh[1])
         self._fov = 45.0
         self._z_clip = ( 0.1, 100.0 )
+        self._cam_pos = [ 10., 5., 10. ]
+        self._interest = [ 0., 0., 0., ]
         self._key_man = KeyMan()
         self._hud_man = HudMan()
         self._reverseDrawOrder = True
@@ -323,6 +327,7 @@ class GLtoast( object ):
             print new_w, new_h, (fw/fh)
         '''
         self._wh = ( new_w, new_h )
+        self._ratio = float(self._wh[0]) / float(self._wh[1])
         # TODO: Auto for all HUDs
         self._hud_man.addElement( "LOG", self._log_pos[0], self._log_pos[1] )
         glutReshapeWindow( self._wh[0], self._wh[1] )
@@ -453,6 +458,16 @@ class GLtoast( object ):
         glMatrixMode( GL_PROJECTION )
         glLoadIdentity()
         glOrtho( 0.0, self._wh[0], 0.0, self._wh[1], 0.0, 1.0 )
+        
+        
+    def set3D( self ):
+        glViewport( 0, 0, self._wh[0], self._wh[1] )
+        glMatrixMode( GL_PROJECTION )
+        glLoadIdentity()
+        gluPerspective( self._fov, self._ratio, self._z_clip[0], self._z_clip[1] )
+        glMatrixMode( GL_MODELVIEW )
+        glLoadIdentity()
+        gluLookAt( *( self._cam_pos + self._interest + self.UP ) )
         
         
     def printTxt( self, x, y, text, col=None, font="H10"):
